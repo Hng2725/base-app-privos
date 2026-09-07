@@ -1,6 +1,7 @@
 /**
  * Resolve the Hub's own origin — not this app's public URL — for backend calls
- * that must reach the Hub directly (the agent-bot credential self-check).
+ * that must reach the Hub directly (payroll passthrough and email history, via
+ * `hub-tool-call.ts`).
  *
  * Since `serveApp` now owns transport and the workload/identity plumbing, this
  * is a thin, mode-aware lookup over SDK primitives only:

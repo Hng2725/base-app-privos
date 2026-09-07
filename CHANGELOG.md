@@ -4,6 +4,55 @@ This project follows [Semantic Versioning](https://semver.org/). Each marketplac
 must equal `privos-app.json.version` and `package.json.version`; change both release notes and metadata
 in one commit.
 
+## [3.0.0] - 2026-09-07
+
+### Fixed
+
+- **A rebuilt `dist/ui` is picked up without restarting the server.** `serveBuiltUi` caches the
+  shell HTML and the asset list at construction, so a server left running across `npm run build`
+  kept serving the previous shell — whose hashed filenames the build had just replaced. The Hub
+  then answered its own UI route with a 400 and nothing in the browser pointed at a stale
+  in-process cache as the cause. `getBuiltUi()` now reconstructs when `dist/ui/index.html`
+  changes on disk, restoring the invalidation the pre-migration handler had.
+- **Asset filenames are hex-hashed** (`hashCharacters: 'hex'`). Rollup's default base64url
+  alphabet includes `-` and `_`, so about one build in thirty emitted a name like
+  `index--IpuopkB.js`. The double dash has to survive every consumer of the shared
+  content-hashed filename rule, the Hub's re-serve route included, and a name that only appears
+  on some builds reads as a code regression rather than a build one. `tests/ui-shell.spec.ts`
+  now asserts the shape of every emitted name.
+- **The dashboard no longer replaces itself with "App assets unavailable — Retry" ten seconds
+  after it renders.** The shell `serveBuiltUi` serves carries an inline boot watchdog that wipes
+  `#root` unless the app sets `window.__privosUiBooted` on its first commit. The migrated
+  `App.tsx` came from an environment that had no such watchdog and never set the flag, so a
+  perfectly healthy UI was torn down on a ten-second loop with nothing wrong on the server side.
+  `tests/ui-shell.spec.ts` now asserts the built bundle carries the assignment.
+
+### Changed
+
+- **The app is now the HR Mini App, migrated off the old `privos-app-packages` checkout.** The whole
+  dashboard — Company, Email, Tuyển dụng, CV Pipeline, CV đã chấm, Chỉnh sửa JD, Hồ sơ NS, Quản lý
+  Lương and Bot soạn thảo — moved in unchanged, and now builds against the published
+  `@privos_ai/app-react` / `@privos_ai/app-server` packages instead of the local `file:` links.
+- **Backend Hub calls use the SDK's agent-bot transport.** The legacy environment pushed an outbound
+  `tools/call` back up its own relay socket; that direction does not exist on this runtime, so the
+  `hrm.payroll.*` passthrough and the room email history now reach the Hub through
+  `POST /api/v1/mcp-apps.tool-call` with this app's installation agent-bot credential — see
+  `src/hub-tool-call.ts`. `roomId` travels with each of those calls so the Hub resolves the grant
+  against the right room.
+- **UI ships as split assets** (`serveBuiltUi`) rather than one inlined 1.3 MB HTML document, with
+  `docx`, `xlsx` and the icon set in their own chunks so every file stays under the 2 MB per-asset cap.
+
+### Removed
+
+- **Every demo panel and its backing tool.** The Info, Records, Files, Skills, Sandbox connect, AI
+  chat/poem/history, Agent bot, Bot workload, Notification, Embeds, Storage, Theme inheritance,
+  Whoami, App Objects, App Database, Assignee and Custom permissions tabs are gone, along with
+  `hr_whoami`, `hr_agent_bot_credential_check`, `hr_app_object_store` and `hr_app_db_store`.
+- **The permissions those tabs alone justified**: `bot:room:join`, `bot:identity:read`,
+  `lists:query`, `notifications:write`, `sandbox:agent-sets:upload`, `sandbox:skills:use`,
+  `sandbox:botkey:push`, `sandbox:wake`, `custom-permissions:read`, `custom-permissions:write` and
+  `users:read`. The declaration is now exactly what the HR dashboard calls.
+
 ## [2.17.3] - 2026-09-01
 
 ### Changed

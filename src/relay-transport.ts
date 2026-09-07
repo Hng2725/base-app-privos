@@ -25,30 +25,17 @@ import { buildRelayAppDescriptor } from './manifest';
 import { handleMcpMessage } from './mcp-message-handlers';
 
 /**
- * Adapts this app's own `(method, id, params, actor)` handler to the SDK's
+ * Adapts this app's own `(method, id, params)` handler to the SDK's
  * `AppMcpHandler` contract. `initialize` / `notifications/initialized` never
  * reach here — the SDK runtime answers those from the descriptor.
  *
- * Relay dispatch (`VerifiedRuntimeDispatchAssertionV3`, both development and
- * standalone-production) carries no bound actor claim itself — unlike the
- * managed Direct HTTP path's cluster assertion, the runtime-v3 relay
- * envelope only proves *which installation* dispatched the call, not *which
- * user*. Naming a verified user over Relay instead needs a SEPARATE
- * Hub-signed RS256 user token, verified against the Hub's JWKS and
- * cross-bound to the already-verified `roomId`. `connectRelay`'s
- * `hubUserTokenAuth: 'auto'` default wires this in automatically and
- * populates `context.actor` whenever a Hub dispatch trust is configured —
- * true for the standalone-production and managed transports `serveApp` now
- * owns (their pinned/broker trust drives it). `startDevelopmentRelay()`'s
- * relaxed compatibility pairing intentionally configures no dispatch trust at
- * all, so the SDK's auto-wiring condition is not met there and `context.actor`
- * stays `undefined` — the same unverified-in-development posture as before.
- * `context.actor` is forwarded as-is; `handleMcpMessage` fails closed on
- * `undefined` and never reads any other, unverified field.
+ * The HR surface carries no per-request caller identity of its own: every
+ * `privos.*` call it makes is authorized by the Hub against this app's grant
+ * for the named room, so `context` is intentionally unused here.
  */
-export async function relayMcpHandler(request: ApplicationMcpRequest, context: ToolCallContext): Promise<unknown> {
+export async function relayMcpHandler(request: ApplicationMcpRequest, _context: ToolCallContext): Promise<unknown> {
 	const id = typeof request.id === 'number' ? request.id : 0;
-	return handleMcpMessage(request.method, id, request.params, context.actor);
+	return handleMcpMessage(request.method, id, request.params);
 }
 
 function relayLogger(prefix: string): (event: string, fields: Record<string, unknown>) => void {
@@ -114,10 +101,11 @@ export async function startDevelopmentRelay(): Promise<RelayHandle> {
 		clientSecret = paired.clientSecret;
 
 		// `mcpAppId` — this app's own installation id — is cached alongside the
-		// relay credentials so the App Objects / App Database demo tabs can
-		// resolve it in development too (`resolve-own-mcp-app-id.ts`). Absent on
-		// a pairing response that predates that (older Hub); those tabs then
-		// report a clear "re-pair" message instead of guessing.
+		// relay credentials because every backend Hub call carries it in its body
+		// (`hub-tool-call.ts` via `resolve-own-mcp-app-id.ts`) — payroll
+		// passthrough and email history both go through it. Absent on a pairing
+		// response that predates it (older Hub); those features then report a
+		// clear "re-pair" message instead of guessing.
 		const cachedVars: Record<string, string> = { PRIVOS_URL: privosUrl, CLIENT_ID: clientId, CLIENT_SECRET: clientSecret };
 		if (paired.mcpAppId) cachedVars.MCP_APP_ID = paired.mcpAppId;
 		saveDevCredentialsToEnv(cachedVars);

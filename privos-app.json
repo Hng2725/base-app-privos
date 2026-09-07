@@ -2,9 +2,9 @@
   "schemaVersion": 3,
   "kind": "mcp-app",
   "name": "ai.privos.mcp-app-hr-and-hrm",
-  "version": "2.17.5",
+  "version": "3.0.0",
   "title": "HR & HRM",
-  "description": "Reference PrivOS MCP app demonstrating HR workflows, scoped workspace APIs, AI and sandbox controls, and license-aware features.",
+  "description": "HR management app for PrivOS: recruitment boards, CV screening pipeline, employee lifecycle profiles, payroll, document drafting and room email history.",
   "icon": "/public/icon.svg",
   "author": {
     "name": "PrivOS AI",
@@ -23,39 +23,12 @@
       "reason": "Identify the approved installation and room so the dashboard can load safely."
     },
     {
-      "scope": "bot:room:join",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "agent.bot.join",
-      "reason": "Add the installation-owned agent bot to the exact Room approved by the Hub.",
-      "degradedBehavior": "The app cannot add its installation-owned agent bot to this Room."
-    },
-    {
-      "scope": "bot:identity:read",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "agent.bot.identity",
-      "reason": "Read safe identity for the installation bot only when it belongs to the exact approved Room.",
-      "degradedBehavior": "The app cannot display the installation bot identity for this Room."
-    },
-    {
       "scope": "lists:read",
       "requirement": "required",
       "context": "room",
       "executionContext": "user",
       "feature": "hr.records.read",
-      "reason": "Read the HR lists selected for this room."
-    },
-    {
-      "scope": "lists:query",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "hr.records.query",
-      "reason": "Page and search HR records without reading the whole list.",
-      "degradedBehavior": "The records table falls back to the unpaged list route, which returns at most 500 items and says so instead of showing a silent subset."
+      "reason": "Read the recruitment, CV pipeline, employee profile and email-history lists of this room."
     },
     {
       "scope": "lists:write",
@@ -63,18 +36,9 @@
       "context": "room",
       "executionContext": "user",
       "feature": "hr.records.manage",
-      "reason": "Create and update HR records from the dashboard.",
+      "reason": "Create and update recruitment boards, CV items, employee profiles and email-history records.",
       "recommended": true,
       "degradedBehavior": "The dashboard remains read-only."
-    },
-    {
-      "scope": "notifications:write",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "notifications.send",
-      "reason": "Send a bell, native mobile, and Web Push notification to one active member of the exact approved room from the Notification demo tab.",
-      "degradedBehavior": "The Notification tab cannot send notifications."
     },
     {
       "scope": "files:read",
@@ -82,8 +46,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "hr.files.read",
-      "reason": "List and preview HR documents attached to the room.",
-      "degradedBehavior": "Document previews and the room file list are hidden."
+      "reason": "Read CVs, job descriptions, skill files and generated documents stored in the room.",
+      "degradedBehavior": "Document previews, CV screening and template loading are unavailable."
     },
     {
       "scope": "files:write",
@@ -91,53 +55,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "hr.files.manage",
-      "reason": "Upload HR documents and generated exports to the room.",
-      "degradedBehavior": "Uploads remain disabled; existing records are unchanged."
-    },
-    {
-      "scope": "sandbox:skills:use",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "sandbox.skills",
-      "reason": "Show and select the skills enabled in the room sandbox.",
-      "degradedBehavior": "Sandbox skill controls are hidden."
-    },
-    {
-      "scope": "sandbox:agent-sets:upload",
-      "requirement": "optional",
-      "context": "workspace",
-      "executionContext": "user",
-      "feature": "sandbox.agent-sets.upload",
-      "reason": "Upload an agent set into the workspace factory on behalf of a workspace administrator.",
-      "degradedBehavior": "The app cannot upload agent sets; existing sets can still be selected for the room."
-    },
-    {
-      "scope": "sandbox:botkey:push",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "sandbox.connect",
-      "reason": "Connect the room sandbox to its installation-specific bot identity.",
-      "degradedBehavior": "The dashboard cannot connect or rotate the sandbox bot identity."
-    },
-    {
-      "scope": "sandbox:wake",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "sandbox.wake",
-      "reason": "Wake the approved room sandbox and display its state.",
-      "degradedBehavior": "Sandbox wake and state controls are unavailable."
-    },
-    {
-      "scope": "sandbox:generate",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "sandbox.workload.generate",
-      "reason": "Start and poll a Sandbox generation as the current user, optionally selecting the installation-owned agent bot as executor, to demonstrate the room's Sandbox workload lifecycle.",
-      "degradedBehavior": "The Bot workload tab cannot start or poll a Sandbox attempt."
+      "reason": "Upload CVs, job descriptions, skill files, email templates and generated DOCX exports to the room.",
+      "degradedBehavior": "Uploads and document generation are disabled; existing records are unchanged."
     },
     {
       "scope": "sandbox:ai-chat",
@@ -145,8 +64,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "sandbox.chat.read",
-      "reason": "Read AI chat history created in the approved room.",
-      "degradedBehavior": "Existing AI chat sessions are not displayed."
+      "reason": "Read the AI chat history the CV screening, JD editing and drafting assistants produce in this room.",
+      "degradedBehavior": "Assistant answers cannot be displayed."
     },
     {
       "scope": "sandbox:ai-chat:write",
@@ -154,8 +73,17 @@
       "context": "room",
       "executionContext": "user",
       "feature": "sandbox.chat.manage",
-      "reason": "Start, send, and stop AI chat work in the approved room.",
-      "degradedBehavior": "AI chat remains read-only when read access is granted, or hidden otherwise."
+      "reason": "Send prompts to the room assistant for CV screening, JD editing and document drafting.",
+      "degradedBehavior": "The assistant tabs become read-only."
+    },
+    {
+      "scope": "sandbox:generate",
+      "requirement": "optional",
+      "context": "room",
+      "executionContext": "user",
+      "feature": "sandbox.workload.generate",
+      "reason": "Start and poll the room sandbox generation that answers each assistant prompt.",
+      "degradedBehavior": "The assistant tabs cannot produce new answers."
     },
     {
       "scope": "db:read",
@@ -163,8 +91,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "platform.db.read",
-      "reason": "Read this app's own room-scoped App Database records and App Objects (CAS) metadata/content in the App Objects and App Database demo tabs, exercised through this app's own installation-bot credential.",
-      "degradedBehavior": "The App Objects and App Database demo tabs cannot read anything back."
+      "reason": "Read this app's own room-scoped payroll records through its installation-bot credential.",
+      "degradedBehavior": "The Payroll tab cannot load payroll records."
     },
     {
       "scope": "db:write",
@@ -172,8 +100,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "platform.db.write",
-      "reason": "Store an immutable content-addressed App Object and create records in this app's own room-scoped App Database collection, in the App Objects and App Database demo tabs.",
-      "degradedBehavior": "The App Objects and App Database demo tabs cannot store or create anything."
+      "reason": "Create, update and delete payroll records in this app's own room-scoped App Database collection.",
+      "degradedBehavior": "The Payroll tab becomes read-only."
     },
     {
       "scope": "db:schema:read",
@@ -181,8 +109,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "platform.db.schema.read",
-      "reason": "Read the demo App Database collection's registered schema in the App Database demo tab.",
-      "degradedBehavior": "The App Database demo tab cannot display its collection schema."
+      "reason": "Read the payroll collection's registered schema before reading or writing records.",
+      "degradedBehavior": "The Payroll tab cannot verify its collection schema."
     },
     {
       "scope": "db:schema:write",
@@ -190,35 +118,8 @@
       "context": "room",
       "executionContext": "user",
       "feature": "platform.db.schema.write",
-      "reason": "Register the demo App Database collection's schema (mcpapp.db.registerCollection) once per room, in the App Database demo tab.",
-      "degradedBehavior": "The App Database demo tab cannot register its demo collection."
-    },
-    {
-      "scope": "custom-permissions:read",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "custom-permissions.read",
-      "reason": "Read the approved room's custom-permission catalog and which members hold each permission, in the Custom permissions demo tab.",
-      "degradedBehavior": "The Custom permissions tab cannot display the room's permission catalog or membership."
-    },
-    {
-      "scope": "custom-permissions:write",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "custom-permissions.write",
-      "reason": "Grant a custom permission's holders read or read+edit access to one isolated-list item (additionalReaders/additionalEditors), and mint/assign a demo permission, from the Custom permissions demo tab. The Hub still requires the acting user to be room owner/admin.",
-      "degradedBehavior": "The Custom permissions tab cannot grant item-level access, nor mint/assign a demo permission."
-    },
-    {
-      "scope": "users:read",
-      "requirement": "optional",
-      "context": "room",
-      "executionContext": "user",
-      "feature": "custom-permissions.assign-by-username",
-      "reason": "Resolve a typed member username to its user id so the Custom permissions demo tab can assign a permission by username instead of a raw user id.",
-      "degradedBehavior": "The Custom permissions tab cannot assign a permission by username; mint and item grant still work."
+      "reason": "Register the payroll collection schema (privos.db.registerCollection) once per room.",
+      "degradedBehavior": "The Payroll tab cannot initialise its collection."
     }
   ],
   "dataPolicy": {
@@ -231,14 +132,14 @@
     "verifiedActor": true
   },
   "agentBot": {
-    "name": "PrivOS Demo Assistant",
-    "slug": "privos-demo-assistant"
+    "name": "HR & HRM Assistant",
+    "slug": "hr-and-hrm-assistant"
   },
   "tools": [
     {
       "name": "hr_management_dashboard",
-      "title": "PrivOS Demo MCP App",
-      "description": "Open the interactive HR workflow and PrivOS platform demonstration dashboard.",
+      "title": "HR & HRM",
+      "description": "Open the interactive HR management dashboard (recruitment, CV pipeline, employee profiles, payroll, drafting and email).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -257,12 +158,180 @@
       }
     },
     {
-      "name": "hr_whoami",
-      "title": "Who am I (verified)",
-      "description": "Return the user identity authenticated by the Hub's body-bound private dispatch assertion.",
+      "name": "debug_log",
+      "title": "Debug Log",
+      "description": "Log a message from the dashboard to the app server terminal.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "name": "hrm.payroll.query",
+      "title": "Query Payroll Data",
+      "description": "Query this app's room-scoped payroll records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "string",
+            "description": "Room that owns the records this call touches."
+          },
+          "collection": {
+            "type": "string"
+          },
+          "where": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "hrm.payroll.create",
+      "title": "Create Payroll Data",
+      "description": "Create one payroll record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "string",
+            "description": "Room that owns the records this call touches."
+          },
+          "collection": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "name": "hrm.payroll.update",
+      "title": "Update Payroll Data",
+      "description": "Update one payroll record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "string",
+            "description": "Room that owns the records this call touches."
+          },
+          "collection": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "name": "hrm.payroll.delete",
+      "title": "Delete Payroll Data",
+      "description": "Delete one payroll record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "string",
+            "description": "Room that owns the records this call touches."
+          },
+          "collection": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "hrm.mail.send",
+      "title": "Send Email via HR System",
+      "description": "Send an email to a candidate or employee through the backend mail queue and record it in the room email history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "toName": {
+            "type": "string",
+            "description": "Name of the recipient"
+          },
+          "toEmail": {
+            "type": "string",
+            "description": "Email address of the recipient"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject of the email"
+          },
+          "htmlContent": {
+            "type": "string",
+            "description": "HTML content of the email"
+          },
+          "roomId": {
+            "type": "string",
+            "description": "Room that owns the email history"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "cv_scored",
+              "lifecycle"
+            ]
+          },
+          "cvItemId": {
+            "type": "string"
+          },
+          "cvListId": {
+            "type": "string"
+          },
+          "jdName": {
+            "type": "string"
+          },
+          "requestedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "toName",
+          "toEmail",
+          "subject",
+          "htmlContent"
+        ]
+      }
+    },
+    {
+      "name": "hrm.mail.retry",
+      "title": "Retry a failed HR email",
+      "description": "Retry a failed room email using its original recipient and content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "roomId",
+          "itemId"
+        ]
       }
     },
     {
@@ -282,15 +351,6 @@
         "required": [
           "records"
         ]
-      }
-    },
-    {
-      "name": "hr_agent_bot_credential_check",
-      "title": "Validate agent bot credential",
-      "description": "Confirm this app's configured agent bot credential authenticates against the Hub.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {}
       }
     }
   ],
@@ -326,30 +386,38 @@
   },
   "env": [
     {
-      "key": "HRM_COMPANY_NAME",
-      "description": "Company name shown in the HR dashboard header.",
-      "required": true,
+      "key": "EMAILJS_SERVICE_ID",
+      "description": "EmailJS service id the HR mail queue delivers through.",
+      "required": false,
       "secret": false,
-      "example": "Acme GmbH",
+      "example": "service_xxxxxxx",
       "default": null
     },
     {
-      "key": "HRM_LOCALE",
-      "description": "BCP-47 locale used for date and currency formatting.",
+      "key": "EMAILJS_TEMPLATE_ID",
+      "description": "EmailJS template id used for HR mail.",
       "required": false,
       "secret": false,
-      "example": "de-DE",
-      "default": "en-US"
+      "example": "template_xxxxxxx",
+      "default": null
     },
     {
-      "key": "HRM_SMTP_PASSWORD",
-      "description": "Password for the SMTP account payslip mail is sent through.",
+      "key": "EMAILJS_PUBLIC_KEY",
+      "description": "EmailJS public key (user id) of the sending account.",
+      "required": false,
+      "secret": false,
+      "example": "xxxxxxxxxxxxxxxxx",
+      "default": null
+    },
+    {
+      "key": "EMAILJS_PRIVATE_KEY",
+      "description": "EmailJS private key, sent as accessToken when the service enforces strict mode.",
       "required": false,
       "secret": true
     },
     {
       "key": "PRIVOS_AGENT_BOT_CREDENTIAL",
-      "description": "This app's agent bot Hub API credential. Issued and rotated only by a workspace admin from this app's settings page, never by this app.",
+      "description": "This app's agent bot Hub API credential, used by its server-side payroll and email-history calls. Issued and rotated only by a workspace admin from this app's settings page, never by this app.",
       "required": false,
       "secret": true
     },

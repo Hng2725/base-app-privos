@@ -1,9 +1,9 @@
 {
   "name": "ai.privos.mcp-app-hr-and-hrm",
-  "version": "2.17.5",
+  "version": "3.0.0",
   "type": "module",
   "private": false,
-  "description": "Reference PrivOS MCP app demonstrating HR workflows, scoped workspace APIs, AI and sandbox controls, and license-aware features.",
+  "description": "HR management app for PrivOS: recruitment boards, CV screening pipeline, employee lifecycle profiles, payroll, document drafting and room email history.",
   "title": "HR & HRM",
   "icon": "/public/icon.svg",
   "homepage": "https://privos.ai",
@@ -57,16 +57,20 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@ant-design/icons": "^6.3.2",
     "@privos_ai/app-react": "^0.6.0",
     "@types/express": "^5.0.6",
+    "@types/node": "^22.10.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/ws": "^8.0.0",
     "@vitejs/plugin-react": "^4.0.0",
+    "docx": "^9.7.1",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "typescript": "^5.0.0",
     "vite": "^5.0.0",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "xlsx": "^0.18.5"
   }
 }

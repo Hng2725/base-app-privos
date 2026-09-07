@@ -4,10 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import pkg from '../package.json';
 
-// Derived, never typed: the archive name carries the app version, so hard-coding it turns
-// every release into a red build. It did — CI failed on every push from 2.0.0 onward, and a
-// permanently red pipeline is one nobody reads.
-const archive = `dist-source/ai.privos.mcp-app-demo-${pkg.version}.zip`;
+// Derived, never typed: the archive name carries the app NAME and version, so hard-coding
+// either turns every release — or every rename — into a red build. It did: CI failed on every
+// push from 2.0.0 onward, and a permanently red pipeline is one nobody reads.
+const archive = `dist-source/${pkg.name.replaceAll('/', '-')}-${pkg.version}.zip`;
 
 const planted = '.env.bak.preflight-test';
 afterEach(() => { if (fs.existsSync(planted)) fs.unlinkSync(planted); });

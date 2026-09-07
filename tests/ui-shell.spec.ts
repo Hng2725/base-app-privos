@@ -1,10 +1,10 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { createElement } from 'react';
 import { beforeAll, describe, expect, it } from 'vitest';
+
 import appManifest from '../privos-app.json';
 import { handleMcpMessage } from '../src/mcp-message-handlers';
-import { LazyBoundary } from '../src/ui/lazy-boundary';
 
 // Read the real `resourceUri` off the published manifest rather than duplicating it as a second
 // literal — the wire contract requires `appSlug` (the `ui://` host) to equal `app.appId`
@@ -31,7 +31,7 @@ beforeAll(() => {
       `vite build failed ahead of the UI shell tests:\n${result.error?.message ?? ''}\n${result.stdout}\n${result.stderr}`,
     );
   }
-});
+}, 120_000);
 
 describe('UI resource identity (appSlug = app.appId, never a different host)', () => {
   it('keeps the ui:// host equal to the registered app id — a mismatch 404s every asset', () => {
@@ -53,73 +53,101 @@ describe('built UI shell and split assets', () => {
     }
   });
 
-  it('lists build files through the sibling assets-manifest resource', async () => {
+  /**
+   * The other half of the watchdog contract, and the one that actually bit: the shell's
+   * `setTimeout(fail, 10000)` wipes `#root` unless the app sets `window.__privosUiBooted` on its
+   * first commit. A UI that renders perfectly but never sets the flag looks fine for ten seconds
+   * and is then replaced by "App assets unavailable — Retry", on a loop, with nothing wrong on the
+   * server side at all. Assert the built bundle carries the assignment.
+   */
+  it('ships a bundle that sets the watchdog success flag', async () => {
     const result = await handleMcpMessage('resources/read', 2, { uri: ASSETS_MANIFEST_URI });
+    const { files } = JSON.parse(result.contents[0].text as string) as { files: { name: string }[] };
+    const bundles = files
+      .filter((file) => file.name.endsWith('.js'))
+      .map((file) => fs.readFileSync(path.resolve('dist/ui/assets', file.name), 'utf8'));
+
+    expect(bundles.some((code) => /__privosUiBooted\s*=\s*!0|__privosUiBooted\s*=\s*true/.test(code))).toBe(true);
+  });
+
+  it('lists build files through the sibling assets-manifest resource', async () => {
+    const result = await handleMcpMessage('resources/read', 3, { uri: ASSETS_MANIFEST_URI });
     const manifest = JSON.parse(result.contents[0].text as string) as { files: { name: string; size: number; type: string }[] };
 
     expect(Array.isArray(manifest.files)).toBe(true);
     expect(manifest.files.some((f) => f.name.endsWith('.js'))).toBe(true);
     expect(manifest.files.some((f) => f.name.endsWith('.css'))).toBe(true);
-    expect(manifest.files.some((f) => /^sample-agent-set\.tar-.+\.gz$/.test(f.name))).toBe(true);
+    // Every asset must stay under the wire contract's 2 MB per-file cap; the heavy
+    // document/spreadsheet libraries are split into their own chunks to keep it that way.
+    for (const file of manifest.files) expect(file.size).toBeLessThanOrEqual(2 * 1024 * 1024);
+  });
+
+  /**
+   * `hashCharacters: 'hex'` in vite.config.ts, asserted rather than assumed. Rollup's default
+   * base64url alphabet includes `-` and `_`, so roughly one build in thirty emits a name like
+   * `index--IpuopkB.js`. The SDK's own filename rule tolerates it, but the double dash then
+   * has to survive every other consumer of that shared rule — including the Hub route that
+   * re-serves these files — and a name that only fails on some builds reads as a code
+   * regression, not a build one. Hex hashes cannot produce it.
+   */
+  it('emits hex-hashed asset names with no separator ambiguity', async () => {
+    const result = await handleMcpMessage('resources/read', 9, { uri: ASSETS_MANIFEST_URI });
+    const { files } = JSON.parse(result.contents[0].text as string) as { files: { name: string }[] };
+
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(file.name, `${file.name} is not <name>-<hexhash>.<ext>`).toMatch(
+        /^[A-Za-z0-9][A-Za-z0-9._]*-[0-9a-f]{8,}\.[a-z0-9]+$/,
+      );
+    }
   });
 
   it('serves a listed asset and refuses an unlisted or .map uri with JSON-RPC -32602', async () => {
-    const manifestResult = await handleMcpMessage('resources/read', 3, { uri: ASSETS_MANIFEST_URI });
+    const manifestResult = await handleMcpMessage('resources/read', 4, { uri: ASSETS_MANIFEST_URI });
     const { files } = JSON.parse(manifestResult.contents[0].text as string) as { files: { name: string }[] };
     const jsFile = files.find((f) => f.name.endsWith('.js'))!;
 
-    const asset = await handleMcpMessage('resources/read', 4, {
+    const asset = await handleMcpMessage('resources/read', 5, {
       uri: `${ASSET_URI_PREFIX}${jsFile.name}`,
     });
     expect(asset.contents[0].mimeType).toBe('text/javascript');
     expect(typeof asset.contents[0].text).toBe('string');
 
-    const unknown = await handleMcpMessage('resources/read', 5, {
+    const unknown = await handleMcpMessage('resources/read', 6, {
       uri: `${ASSET_URI_PREFIX}does-not-exist.js.map`,
     }).catch((err: Error & { code?: number }) => err);
     expect(unknown).toBeInstanceOf(Error);
     expect((unknown as Error & { code?: number }).code).toBe(-32602);
   });
 
+  /**
+   * `serveBuiltUi` caches the shell and the asset list at construction, so a server left
+   * running across a rebuild would serve the previous shell — referencing hashed filenames the
+   * build has already deleted. The Hub then 400s on its own UI route and nothing points at the
+   * stale in-process cache. Assert the handler notices a new build instead.
+   */
+  it('picks up a rebuilt dist/ui without a server restart', async () => {
+    const indexPath = path.resolve('dist/ui/index.html');
+    const original = fs.readFileSync(indexPath, 'utf8');
+
+    const before = await handleMcpMessage('resources/read', 10, { uri: UI_RESOURCE_URI });
+    expect(before.contents[0].text).not.toContain('<!--rebuilt-marker-->');
+
+    try {
+      fs.writeFileSync(indexPath, original.replace('</head>', '<!--rebuilt-marker-->\n</head>'));
+      const after = await handleMcpMessage('resources/read', 11, { uri: UI_RESOURCE_URI });
+      expect(after.contents[0].text).toContain('<!--rebuilt-marker-->');
+    } finally {
+      fs.writeFileSync(indexPath, original);
+    }
+  });
+
   it('serves the identical shell from both the tools/call embedded resource and resources/read', async () => {
-    const viaResourcesRead = await handleMcpMessage('resources/read', 6, { uri: UI_RESOURCE_URI });
-    const viaToolsCall = await handleMcpMessage('tools/call', 7, {
+    const viaResourcesRead = await handleMcpMessage('resources/read', 7, { uri: UI_RESOURCE_URI });
+    const viaToolsCall = await handleMcpMessage('tools/call', 8, {
       name: 'hr_management_dashboard',
       arguments: {},
     });
     expect(viaToolsCall.content[0].resource.text).toBe(viaResourcesRead.contents[0].text);
-  });
-});
-
-describe('lazy panel error boundary — Reload fallback', () => {
-  it('renders the "unavailable" fallback after catching a failed chunk load', () => {
-    const derived = LazyBoundary.getDerivedStateFromError();
-    expect(derived).toEqual({ hasError: true });
-
-    const boundary = new LazyBoundary({ children: createElement('div') });
-    boundary.state = derived;
-    const output = boundary.render() as any;
-
-    const rendered = JSON.stringify(output);
-    expect(rendered).toContain('A new version of this app is available');
-    expect(rendered).toContain('Reload');
-
-    // The Reload button must actually trigger a full page reload, not a re-render.
-    const button = output.props.children[1];
-    expect(button.type).toBe('button');
-    const reload = { reload: () => {} };
-    let called = false;
-    reload.reload = () => {
-      called = true;
-    };
-    (globalThis as any).window = { location: reload };
-    button.props.onClick();
-    expect(called).toBe(true);
-  });
-
-  it('renders children unchanged before any error is caught', () => {
-    const child = createElement('span', { id: 'ok' }, 'content');
-    const boundary = new LazyBoundary({ children: child });
-    expect(boundary.render()).toBe(child);
   });
 });

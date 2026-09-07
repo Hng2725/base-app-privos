@@ -2,7 +2,7 @@
  * Resolve THIS app's own installation id (`mcpAppId`, the Hub's Mongo `_id`
  * for this installation) — required as the `mcpAppId` body field on every
  * `POST /api/v1/mcp-apps.tool-call` bot-credential call (see
- * `app-platform-tool-call.ts`). Mode-aware, same shape as
+ * `hub-tool-call.ts`). Mode-aware, same shape as
  * `resolve-hub-origin.ts`:
  *  - `managed`: the workload broker's own binding — read from the same
  *    `getWorkloadIdentityClient()` singleton `serveApp` bootstraps.
@@ -10,9 +10,8 @@
  *    delivered by the Hub at pairing.
  *  - `development`: `MCP_APP_ID`, cached to `.env` by the dev pairing loop
  *    (`relay-transport.ts`) from the SAME pairing response. Absent until a
- *    fresh `npm run pair` / `npm run dev` pairing run after this app added
- *    the App Objects / App Database demo tabs — an existing cached `.env`
- *    from before that change has no `MCP_APP_ID` key yet.
+ *    fresh `npm run pair` / `npm run dev` pairing run — an `.env` cached by an
+ *    older run has no `MCP_APP_ID` key yet.
  * Returns `undefined` when none is available.
  */
 import { getWorkloadIdentityClient, loadStandaloneIdentity, resolveRuntimeMode } from '@privos_ai/app-server';
