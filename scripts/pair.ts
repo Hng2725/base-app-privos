@@ -57,7 +57,16 @@ function runStandaloneServer(): Promise<number> {
 
 	console.log(`\nStarting the app: ${argv.join(' ')}\n`);
 	return new Promise((resolve, reject) => {
-		const child = spawn(argv[0], argv.slice(1), { cwd: repositoryRoot, stdio: 'inherit', env: { ...process.env, NODE_ENV: 'production' } });
+		// `shell` on Windows: npm/pnpm/yarn ship as `.cmd` shims there, and Node
+		// stopped resolving `.cmd` for a bare command name in the CVE-2024-27980
+		// fix — without this, a pairing that fully succeeded still ends in
+		// `spawn npm ENOENT` after the identity file is already written.
+		const child = spawn(argv[0], argv.slice(1), {
+			cwd: repositoryRoot,
+			stdio: 'inherit',
+			shell: process.platform === 'win32',
+			env: { ...process.env, NODE_ENV: 'production' },
+		});
 		child.on('error', reject);
 		child.on('exit', (code, signal) => resolve(signal ? 1 : (code ?? 0)));
 	});

@@ -17,3 +17,5 @@ dist-source/
 
 # Standalone pairing identity (secret: relay creds + dispatch trust) — never commit
 privos-standalone-identity.json
+privos-standalone-identity.pending.json
+privos-standalone-identity.json.pending

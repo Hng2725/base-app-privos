@@ -19,9 +19,17 @@ const ASSET_URI_PREFIX = `${UI_RESOURCE_URI.slice(0, UI_RESOURCE_URI.lastIndexOf
 // contract cannot assume `dist/ui` already exists — build it here first, the same way
 // packaging.spec.ts self-invokes its own script instead of assuming prior pipeline steps ran.
 beforeAll(() => {
-  const result = spawnSync(path.resolve('node_modules/.bin/vite'), ['build'], { encoding: 'utf8' });
+  // Invoke vite's JS entry through the current node binary rather than the
+  // `node_modules/.bin/vite` shim: on Windows the extensionless shim is a shell
+  // script Node cannot spawn, so this silently threw ENOENT and skipped every
+  // assertion below — including the appSlug check this file exists to make.
+  const result = spawnSync(process.execPath, [path.resolve('node_modules/vite/bin/vite.js'), 'build'], {
+    encoding: 'utf8',
+  });
   if (result.status !== 0) {
-    throw new Error(`vite build failed ahead of the UI shell tests:\n${result.stdout}\n${result.stderr}`);
+    throw new Error(
+      `vite build failed ahead of the UI shell tests:\n${result.error?.message ?? ''}\n${result.stdout}\n${result.stderr}`,
+    );
   }
 });
 

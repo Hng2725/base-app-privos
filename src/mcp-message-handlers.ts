@@ -272,7 +272,12 @@ function handleResourcesRead(uri: unknown): { contents: unknown[] } {
 	const asset = typeof uri === 'string' ? getBuiltUi().readAsset(uri) : null;
 	if (asset) return { contents: [asset] };
 
-	throw Object.assign(new Error(`Unknown resource: ${typeof uri === 'string' ? uri : '<missing>'}`), {
+	// Log the refused URI: the SDK's `mcp.request.error` event carries only the
+	// error code, so an appSlug/manifest mismatch (the Hub asking under a stale
+	// pinned manifest) is otherwise invisible on this side of the relay.
+	const requested = typeof uri === 'string' ? uri : '<missing>';
+	console.error(`[resources/read] refused unknown resource: ${requested} (this app serves ${UI_RESOURCE_URI})`);
+	throw Object.assign(new Error(`Unknown resource: ${requested}`), {
 		code: INVALID_PARAMS,
 	});
 }

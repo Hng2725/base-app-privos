@@ -1,10 +1,10 @@
 {
-  "name": "ai.privos.mcp-app-demo",
+  "name": "ai.privos.mcp-app-hr-and-hrm",
   "version": "2.17.5",
   "type": "module",
   "private": false,
   "description": "Reference PrivOS MCP app demonstrating HR workflows, scoped workspace APIs, AI and sandbox controls, and license-aware features.",
-  "title": "PrivOS Demo MCP App",
+  "title": "HR & HRM",
   "icon": "/public/icon.svg",
   "homepage": "https://privos.ai",
   "author": {
@@ -33,7 +33,9 @@
   "scripts": {
     "build": "vite build && tsx scripts/generate-manifest.ts && npm run manifest:lint",
     "dev": "PRIVOS_TRANSPORT=relay PRIVOS_DEV_UI=1 tsx src/server.ts",
+    "prestart": "node scripts/patch-sdk-windows.mjs && node scripts/check-single-instance.mjs",
     "start": "tsx src/server.ts",
+    "stop": "node scripts/check-single-instance.mjs --kill",
     "pair": "tsx scripts/pair.ts",
     "start:relay": "PRIVOS_TRANSPORT=relay npm start",
     "start:standalone": "NODE_ENV=production npm start",
